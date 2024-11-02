@@ -1,6 +1,8 @@
 ---
 title: "Webscraping: A Quick Guide"
-format: revealjs
+format: 
+  revealjs:
+    theme: moon
 ---
 
 ## Do you really need webscraping?
