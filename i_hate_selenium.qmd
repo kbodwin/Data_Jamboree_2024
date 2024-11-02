@@ -1,0 +1,105 @@
+---
+title: "Untitled"
+format: revealjs
+---
+
+```{r}
+#| label: libraries
+library(tidyverse)
+library(httr2)
+library(rvest)
+library(RSelenium)
+```
+
+
+```{r}
+#| label: urls
+
+urls <- c("artistic-gymnastics", 
+          "football",
+          "swimming",
+          "volleyball",
+          "basketball",
+          "athletics"
+)
+```
+
+```{r}
+system('docker run -v /dev/shm:/dev/shm -d -p 4445:4444 selenium/standalone-chrome-debug')
+remDr <- remoteDriver(remoteServerAddr = "localhost",
+                      browserName='chrome', port = 4445L)
+remDr$open()
+```
+
+
+Gonna scrape by country:
+
+```{r}
+remDr$navigate("https://olympics.com/ioc/national-olympic-committees")
+
+    h <- remDr$getPageSource()
+    h <- read_html(h[[1]])
+    
+    h |>
+      html_elements("noc-item")
+```
+
+
+
+```{r}
+session <- selenider_session(browser = "chrome")
+
+scrape_names <- function(sport) {
+  url <- paste0("https://olympics.com/en/paris-2024/athletes/", sport)
+  
+  open_url(url)
+  
+  ## Find total num of athletes
+  num_athletes <- s("body") |> 
+    read_html() |>
+    html_elements("span.pe-3") |>
+    html_text() |>
+    str_subset("\\d+ Elements") |>
+    parse_number()
+  
+  ## Loop until all found
+  n <- 0
+  ath_names <- c()
+  while (n < num_athletes) {
+  
+    new_names <- s("body") |> 
+      read_html() |>
+      html_elements("span.competitor-long-name") |>
+      html_text() |>
+      str_to_title() 
+    
+    ath_names <- c(ath_names, new_names)
+    
+    n <- length(ath_names)
+    
+    s("body") |>
+      find_elements("div")
+    
+    next_page$setElementAttribute("value", 2)
+
+    Sys.sleep(4)
+    
+    
+            # click button
+  }
+  
+}
+
+```
+
+```{r}
+
+  
+  webElem <- remDr$findElement(using = 'id', "selectorNocToggle")
+opts <- webElem$selectTag()
+  
+ ## Use Selenium to go to site and get html
+  remDr$navigate(url)
+  
+```
+

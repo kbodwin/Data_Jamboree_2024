@@ -1,0 +1,366 @@
+---
+title: "Webscraping: A Quick Guide"
+format: revealjs
+---
+
+## Do you really need webscraping?
+
+![](https://preview.redd.it/k5uewq2eq4s91.png?auto=webp&s=34fe3445cfe3a828234ddfd811b2948efdb663b4)
+
+## Do you really need webscraping?
+
+You've found your *perfect data source*.  Hooray!  But do you really need to scrape it?
+
+. . .
+
+Is the data **small enough** and **stable enough** that you can just copy-paste by hand?
+
+. . .
+
+Is there an **API** offered by the site? Or one created by a 3rd party?
+
+. . .
+
+Has **someone else** already scraped this data?
+
+## HTML and Source Code
+
+![](https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTLegkbkFmsCnfTWpa0cmJlv43OUP7Z2_wLdQ&s)
+
+## HTML and Source Code
+
+The appearance of every website is dictated by **HTML**.
+
+. . .
+
+This uses **tags** to create **elements** of the site.
+
+. . .
+
+It can look pretty gnarly at first!
+
+
+## HTML and Source Code
+
+For example:
+
+`<b> This is bold </b>`
+
+will show bold text.
+
+. . .
+
+`<a href="www.google.com">Click here for Google</a>`
+
+makes a link.
+
+## HTML and Source Code
+
+Look at the source code of a site by:
+
+* **Right-clicking** and choosing "View Page Source"
+
+* Typing `view-source:` in front of the full url, e.g.
+
+`view-source:https://www.google.com`
+
+* **Right-clicking** and choosing "Inspect" - more on that in a sec.
+
+
+## HTML and Source Code
+
+If you try this, instead of seeing simple examples like I just gave, you'll see something like:
+
+``` 
+<div class="w3-bar" id="myNavbar">
+    <a class="w3-bar-item w3-button w3-hover-black w3-hide-medium w3-hide-large w3-right" href="javascript:void(0);" onclick="toggleFunction()" title="Toggle Navigation Menu">
+      <i class="fa fa-bars"></i>
+    </a>
+    <a href="#home" class="w3-bar-item w3-button">HOME</a>
+    <a href="#about" class="w3-bar-item w3-button w3-hide-small"><i class="fa fa-user"></i> ABOUT</a>
+    <a href="#portfolio" class="w3-bar-item w3-button w3-hide-small"><i class="fa fa-th"></i> PORTFOLIO</a>
+    <a href="#contact" class="w3-bar-item w3-button w3-hide-small"><i class="fa fa-envelope"></i> CONTACT</a>
+    <a href="#" class="w3-bar-item w3-button w3-hide-small w3-right w3-hover-red">
+      <i class="fa fa-search"></i>
+    </a>
+  </div>
+```
+
+## Anatomy of a tag
+
+When you look at a tag, only the **first word** really matters.
+
+Everything else inside the `<  >` is *attributes*.
+
+. . .
+
+```
+<a class="w3-bar-item w3-button w3-hover-black w3-hide-medium w3-hide-large w3-right" href="javascript:void(0);" onclick="toggleFunction()" title="Toggle Navigation Menu">
+```
+
+This is an **a** tag (a link).
+
+It has some *attributes* `class`, `href`, `onclick`, `title`.
+
+## Anatomy of a tag
+
+Inside a tag is **plain text**:
+
+```
+<a href="#about" class="w3-bar-item w3-button w3-hide-small"><i class="fa fa-user"></i> ABOUT</a>
+```
+
+The text in this tag is "ABOUT".
+
+## Useful tags
+
+The tags you most need to know for webscraping are:
+
+* `<table>` - if our data is already in a table form, we're lucky!
+
+* `<a>` - for when you need to find links
+
+* `<p>` - often surrounds formatted text we want to grab.
+
+## Useful tags
+
+* `<div>` and `<span>`:  These are general; think of them like a "section" and "subsection".  However, sometimes you can use their *attributes* to zoom in on information you are interested in.
+
+* `<h1>`, `<h2>`, etc.  These are "headers" that create large title text. We can use them to find our place on a page.
+
+# Steps for webscraping
+
+## 1. Identify where your information lives
+
+* Does it live in a table?
+
+. . .
+
+If so:
+
+* Are there more tables on the page?  
+
+* Does your table have different *attributes* than the others?
+
+* Is there *unique text* in your table you can use to identify it?
+
+* Are there any unique labels near your table (like headers)?
+
+
+## 1. Identify where your information lives
+
+* Does it live in a table?
+
+. . .
+
+If not:
+
+* What tag(s) does it live in?
+
+* How can you identify these tags among the others?
+
+* Is the structure of your data consistent?
+
+## 2. Identify additional links you'll need to follow
+
+Maybe all your information is on one landing page.  Lucky you!
+
+But maybe you need to find and follow other links for. . .
+
+. . .
+
+* Going to the next page(s) of results.
+
+* Getting lower level information about your observational units, like athlete birthdays.
+
+* Determining if a piece of information should be included.
+
+## 3. Functions are your friend
+
+You will have a much easier time if you write lots of small subfunctions for your process.
+
+. . .
+
+```
+## gather all tables from site
+list_of_tables = get_tables(url)
+
+## pull relevant info from each
+my_data = map(list_of_tables, pull_info)
+
+## follow links to additional information
+get_info = map(my_data$links, click_links)
+```
+
+# When HTML goes wrong.
+
+![](https://media.istockphoto.com/id/1068379278/photo/stressed-business-mans-head-is-burning.jpg?s=612x612&w=0&k=20&c=3xfZYedARXaDx3OBleY-3vf56gXVmTFjx35XZU2_EnY=)
+
+## JavaScript
+
+Many pages on the internet rely on **JavaScript** to be built.
+
+. . .
+
+This means that the HTML doesn't exist; it gets generated at the moment you visit the site.
+
+. . .
+
+This makes beautiful websites with dynamic data!
+
+
+## It also makes webscraping much harder.
+
+![](https://media.istockphoto.com/id/1225551593/photo/sad-adult-woman-crying-reading-bad-news-on-laptop-at-home.jpg?s=612x612&w=0&k=20&c=1Edwa9sJfHfJD0haajZgpIawAS4vKNyDfKzMwyAZm-A=")
+
+## Source Code vs Inspection
+
+When you **inspect** a website, you see the HTML that is responsible for the current layout.
+
+When you **view the source**, you see the *permanent* back-end of the website.
+
+. . .
+
+The *permanent* back-end might be JavaScript, even if you can *inspect* the HTML.
+
+. . .
+
+Code-based webscraping functions typically can only grab the *permanent* website source code.
+
+## Headless Browsers
+
+The only way around this is to make your *code script* behave like a *human*.
+
+. . .
+
+We can use *headless browsers* to "invisibly" open a window in Chrome, Firefox, etc.
+
+. . .
+
+Then the computer can behave like a human - even **clicking buttons** and **entering information**!
+
+. . .
+
+. . .but this is a much bigger pain to code and often goes wrong. :(
+
+# Blocked!
+
+![](https://media1.tenor.com/m/L-10W-4ot68AAAAd/spike-volleyball-spike.gif)
+
+## robots.txt
+
+Every website has a file called `robots.txt` that tells you what you are and aren't allowed to scrape.
+
+Find this by adding `robots.txt` to the base URL.
+
+. . .
+
+For example, `https://www.calpoly.edu/robots.txt` says:
+
+```
+robots.txt
+#
+# This file is to prevent the crawling and indexing of certain parts
+# of your site by web crawlers and spiders run by sites like Yahoo!
+# and Google. By telling these "robots" where not to go on your site,
+# you save bandwidth and server resources.
+#
+# This file will be ignored unless it is at the root of your host:
+# Used:    http://example.com/robots.txt
+# Ignored: http://example.com/site/robots.txt
+#
+# For more information about the robots.txt standard, see:
+# http://www.robotstxt.org/robotstxt.html
+
+User-agent: *
+# CSS, JS, Images
+Allow: /core/*.css$
+Allow: /core/*.css?
+Allow: /core/*.js$
+Allow: /core/*.js?
+Allow: /core/*.gif
+Allow: /core/*.jpg
+Allow: /core/*.jpeg
+Allow: /core/*.png
+Allow: /core/*.svg
+Allow: /profiles/*.css$
+Allow: /profiles/*.css?
+Allow: /profiles/*.js$
+Allow: /profiles/*.js?
+Allow: /profiles/*.gif
+Allow: /profiles/*.jpg
+Allow: /profiles/*.jpeg
+Allow: /profiles/*.png
+Allow: /profiles/*.svg
+# Directories
+Disallow: /core/
+Disallow: /profiles/
+```
+
+## robots.txt
+
+Some of the settings in `robots.txt` *automatically* block webscrapers.
+
+Others are just messages for humans, that we need to respect.
+
+```
+# Welcome to Reddit's robots.txt
+# Reddit believes in an open internet, but not the misuse of public content.
+# See https://support.reddithelp.com/hc/en-us/articles/26410290525844-Public-Content-Policy Reddit's Public Content Policy for access and use restrictions to Reddit content.
+# See https://www.reddit.com/r/reddit4researchers/ for details on how Reddit continues to support research and non-commercial use.
+# policy: https://support.reddithelp.com/hc/en-us/articles/26410290525844-Public-Content-Policy
+
+User-agent: *
+Disallow: /
+```
+
+## Automatically preventing scraping.
+
+Some sites will build in more sophisticated code to **block** or **strangle**.
+
+. . .
+
+They are usually just trying to **limit** you, so you don't query their servers 100000 times a second and crash their cloud.
+
+. . .
+
+Get around this (and be polite!) by adding `sleep(20)` into any loops or repetitions in your code.
+
+# Takeaway messages
+
+## Takeaway messages
+
+1. A dataset that already exists is better than one that needs to be scraped.
+
+. . .
+
+2. An API is better than writing your own webscraper.
+
+. . .
+
+3. Ya gotta learn some HTML to webscrape, sorry.
+
+. . .
+
+4. Ya gotta respect the `robots.txt` and the query limitations.
+
+## Takeaway messages
+
+5. Data in a `<table>` tag is better than "loose" data.
+
+. . .
+
+6. Data in *consistent* tag format is better than inconsistent.
+
+. . .
+
+7. Websites made with static HTML are MUCH easier to scrape than JavaScript-built ones; check this by viewing source.
+
+. . .
+
+8. Webscraping is **fun** and **powerful**, when you get the hang of it!
+
+## Now, go get some data!
+
+![](https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQUuS6tN1Daoj6sztZBLfkNZ-Q5OWL1j8nQig&s")
+

@@ -1,0 +1,264 @@
+---
+title: "Data Jamboree: Athlete Birth Months"
+format: html
+execute:
+  cache: true
+---
+
+```{r}
+library(tidyverse)
+library(httr2)
+library(rvest)
+```
+
+## Webscraping
+
+Well, Selenium was a disaster, so we'll try a different approach.
+
+1. Get the links to the wiki pages for each country in the Olympics.
+2. Find the sections corresponding to the sports of interest.
+3. Pull the athlete lists and links from those tables.
+4. Get athlete bdays from the links.
+
+### Get country links
+
+```{r}
+base_html <- req_perform(request("https://en.wikipedia.org/wiki/2024_Summer_Olympics")) |>
+  resp_body_html()
+
+all_tables <- base_html  |>
+  html_elements("table")
+
+is_nocs <- all_tables |>
+  html_text() |>
+  str_detect("Participating National Olympic Committees")
+
+country_links <- all_tables[is_nocs] |>
+  html_elements("a") |>
+  html_attr("href")
+```
+
+### Get athlete tables for each country
+
+```{r}
+sports_of_interest <- c("Volleyball", "Basketball", "Football", "Swimming", "Gymnastics", "Swimming", "Athletics")
+
+sports_of_interest_rx <- "(Volleyball)|(Basketball)|(Football)|(Swimming)|(Gymnastics)|(Swimming)|(Athletics)"
+
+get_country_athletes <- function(country_link) {
+  
+  full_url <- paste0("en.wikipedia.org", country_link)
+  
+  get_url <- tryCatch(
+    {
+      page_html <- full_url |>
+        request() |>
+      req_perform() |>
+      resp_body_html()
+    },
+    error = function(cond){
+      message(paste0("Skipping ", country_link))
+              }
+    )
+  
+    if (is.null(get_url)){
+      res_c <- tibble(
+        Name = c(),
+        URL = c(),
+        Sport = c())
+      
+      return(res_c)
+    }
+
+  
+  ## Get all section headers and tables
+  #### Typically one table in each sport section
+  sections <- page_html |>
+    html_elements("h2,table") 
+  
+  ## Get header ids
+  sec_ids <- sections |>
+    html_attr("id") 
+  
+  ## Match header ids to sport
+  which_ones <- which(str_detect(sec_ids, sports_of_interest_rx))
+  
+  ## Extract which sport this is
+  sport_names <- sec_ids[which_ones] |> str_extract(sports_of_interest_rx)
+  
+  ## First table after relevant header is the one we want
+  #### Get the first cell of the table to find athletes
+  athletes <- sections[which_ones + 1] |>
+    html_element("td") |>
+    html_element("a")
+  
+  ## List of athlete names, wiki links, and sport
+  res_c <- tibble(
+    Name = athletes |> html_text(),
+    URL = athletes |> html_attr("href"),
+    Sport = sport_names)
+  
+  res_c$Country = country_link |> 
+    str_remove(fixed("_at_the_2024_Summer_Olympics")) |>
+    str_remove(fixed("/wiki/"))
+  
+  return(res_c)
+  
+}
+
+get_country_athletes(country_links[198])
+```
+
+### Get bdays
+
+```{r}
+get_birthday <- function(athlete_link){
+  
+  get_url <- tryCatch({
+    full_url <- paste0("en.wikipedia.org", athlete_link)
+  
+  page_html <- full_url |>
+    request() |>
+    req_perform() |>
+    resp_body_html()
+  },
+  error = function(cond){
+      message(paste0("Skipping ", athlete_link))
+  }
+  )
+  
+  if (is.null(get_url)){
+    return("")
+  }
+  
+  bday <- page_html |>
+    html_elements("table[class='infobox vcard']") |>
+    html_elements("td[class='infobox-data']") |>
+    html_text() |>
+    str_extract("\\d{4}\\-\\d{2}\\-\\d{2}")
+    
+  
+  bday <- bday[!is.na(bday)]
+  
+  if (length(bday) == 0) {
+    bday = ""
+  }
+  
+  return(bday)
+  
+}
+
+get_country_athletes(country_links[2])$URL |>
+  map_chr(get_birthday)
+```
+
+### Combine into one function
+
+```{r}
+get_all_country_info <- function(country_link) {
+  
+  athlete_list <- get_country_athletes(country_link)
+  
+  athlete_list$DOB <- athlete_list$URL |>
+    map_chr(get_birthday)
+  
+  return(athlete_list)
+}
+
+get_all_country_info(country_links[2])
+```
+
+
+### Run it for all countries!
+
+```{r}
+all_athletes <- country_links[-1] |>
+  map_dfr(get_all_country_info)
+```
+
+## FINALLY the fun part
+
+### Clean the data
+
+```{r}
+head(all_athletes)
+
+all_athletes <- all_athletes |>
+  mutate(
+    DOB = parse_date(DOB),
+    Month = month(DOB, label = TRUE)
+  )
+```
+
+### Look at just sports where I gathered a larger number of athletes
+
+```{r}
+limited <- all_athletes |>
+  drop_na(Month) |>
+  filter(
+    Sport %in% c("Athletics", "Gymnastics", "Swimming")
+  )
+
+limited |>
+  ggplot(aes(x = Month)) +
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(
+    x = "",
+    y = "",
+    title = "Frequency of birth months for 2024 Olympic athletes",
+  )
+
+counts_top <- limited |>
+  group_by(Sport, Month) |>
+  count() |>
+  ungroup() |>
+  group_by(Sport) |>
+  mutate(
+    strata = case_when(
+      n > 0.9*max(n) ~ "Top",
+      n < 1.1*min(n) ~ "Bottom",
+      TRUE ~ "Medium"
+    )
+  )
+
+counts_top |>
+  ggplot(aes(x = Month, y = n, fill = strata)) +
+  geom_col() +
+  facet_wrap(~Sport, scales = "free") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none") +
+  labs(
+    x = "",
+    y = "",
+    title = "Frequency of birth months for 2024 Olympic athletes",
+  )
+
+
+```
+
+### Chisq tests!
+
+```{r}
+counts <- limited |>
+  group_by(Sport) |>
+  count(Month) |>
+  pivot_wider(names_from = Sport, values_from = n) 
+
+unique(limited$Sport) |> map(~chisq.test(counts[.x]))
+
+limited |>
+  count(Month) |>
+  pull(n) |>
+  chisq.test()
+```
+
+## Thoughts
+
+* I sunk most of my time into the initial attempt at webscraping, which was a bummer.  JavaScript ruins everything.
+
+* To accomplish this fully, I'd want to write separate scraping functions for each sport.  The wiki pages were consistent across countries but formatted differently in the sections by sport; for example, team sports had separate tables for each roster.
+
+* With richer data, I'd like to look at the year of birth, the country, the gender, and possibly the athlete ranking.
+
+* Really, we should be accounting for the overall birth rate by month!  It's different by country as well; for example, July is the highest rate month for American babies.
